@@ -1,0 +1,198 @@
+--서브쿼리
+--SELECT문이 SELECT구문으로 들어가는 형태 : 스칼라 서브쿼리
+--SELECT문이 FROM구문으로 들어가는 형태 : 인라인뷰
+--SELELCT문이 WHERE구문으로 들어가면 : 서브쿼리
+--서브쿼리는 반드시 () 안에 적습니다.
+
+--단일행 서브쿼리 - 리턴되는 행이 1개인 서브쿼리
+
+SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'Nancy';
+SELECT * FROM EMPLOYEES WHERE SALARY > 12008;
+
+SELECT *
+FROM EMPLOYEES 
+WHERE SALARY > (SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'Nancy');
+
+-- EMPLOYEE_ID가 103번인 사람과 동일한 직군을 찾아라
+SELECT JOB_ID FROM EMPLOYEES WHERE EMPLOYEE_ID = 103;
+
+SELECT *
+FROM EMPLOYEES
+WHERE JOB_ID = (SELECT JOB_ID FROM EMPLOYEES WHERE EMPLOYEE_ID = 103);
+
+-- 주의할 점: 단일행 이어야합니다. 컬럼 값도 1개여야 합니다.
+SELECT *
+FROM EMPLOYEES
+WHERE JOB_ID = (SELECT * FROM EMPLOYEES WHERE EMPLOYEE_ID = 103); -- 값이 너무 많아서 에러
+
+SELECT *
+FROM EMPLOYEES
+WHERE JOB_ID = (SELECT JOB_ID FROM EMPLOYEES WHERE EMPLOYEE_ID = 103); --이렇게 해야함
+
+SELECT *
+FROM EMPLOYEES
+WHERE JOB_ID = (SELECT JOB_ID FROM EMPLOYEES WHERE EMPLOYEE_ID = 103 OR EMPLOYEE_ID = 104); --다중행이어서 에러
+
+--------------------------------------------------------------------------------
+
+--다중행 서브쿼리 : 행이 여러개라면, IN, ANY, ALL로 비교합니다.
+SELECT SALARY 
+FROM EMPLOYEES
+WHERE FIRST_NAME = 'David';
+
+--IN 동일한 값을 찾음 = 4800,6800,9500
+SELECT *
+FROM EMPLOYEES
+WHERE SALARY IN (SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'David');
+
+--ANY 최소값 보다 큼, 최대값 보다 작음
+SELECT * 
+FROM EMPLOYEES
+WHERE SALARY > ANY (SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'David'); --급여가 4800보다 큰 사람들 
+
+SELECT *
+FROM EMPLOYEES
+WHERE SALARY < ANY (SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'David'); --급여가 9500보다 작은 사람들 
+
+--ALL 최대값 보다 큼, 최소값 보다 작음
+SELECT *
+FROM EMPLOYEES
+WHERE SALARY > ALL (SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'David'); --급여가 9500보다 큰 사람들
+
+SELECT *
+FROM EMPLOYEES
+WHERE SALARY < ALL (SELECT SALARY FROM EMPLOYEES WHERE FIRST_NAME = 'David');--급여가 4800보다 작은 사람들
+
+--직업이 IT_PROG인 사람들보다 큰 급여를 받는 사람들
+--직업이 IT_PROG인 사람들의 급여 최소값 보다 큰 급여를 받는 사람들
+SELECT SALARY
+FROM EMPLOYEES
+WHERE JOB_ID = 'IT_PROG';
+
+SELECT SALARY,
+       FIRST_NAME
+FROM EMPLOYEES
+WHERE SALARY > ANY (SELECT SALARY FROM EMPLOYEES WHERE JOB_ID = 'IT_PROG');
+
+-------------------------------------------------------------------------------
+
+--스칼라 쿼리
+--JOIN시에 특정 테이블의 1컬럼을 가지고 올 때 유리합니다.
+SELECT FIRST_NAME,
+       EMAIL,
+      (SELECT DEPARTMENT_NAME FROM DEPARTMENTS D WHERE D.DEPARTMENT_ID = E.DEPARTMENT_ID)
+FROM EMPLOYEES E
+ORDER BY FIRST_NAME;
+--위와 같은 결과
+SELECT FIRST_NAME,
+       EMAIL,
+       DEPARTMENT_NAME
+FROM EMPLOYEES E
+LEFT JOIN DEPARTMENTS D ON D.DEPARTMENT_ID = E.DEPARTMENT_ID
+ORDER BY FIRST_NAME;
+
+--각 부서의 매니저 이름을 출력하고싶다
+--조인
+SELECT * FROM EMPLOYEES;
+SELECT * FROM DEPARTMENTS;
+
+SELECT D.DEPARTMENT_NAME AS 부서명,
+       E.FIRST_NAME || ' ' || E.LAST_NAME AS 매니저이름
+FROM DEPARTMENTS D
+LEFT JOIN EMPLOYEES E ON D.MANAGER_ID = E.EMPLOYEE_ID;
+
+--스칼라
+SELECT D.*,
+       (SELECT FIRST_NAME FROM EMPLOYEES E WHERE E.EMPLOYEE_ID = D.MANAGER_ID)
+FROM DEPARTMENTS D;     
+
+--스칼라쿼리는 여러번 가능
+SELECT * FROM JOBS; --JOB_TITLE 필요
+SELECT * FROM DEPARTMENTS; --DELPARTMNET_NAME
+SELECT * FROM EMPLOYEES;
+
+SELECT E.FIRST_NAME,
+       E.JOB_ID,
+       (SELECT JOB_TITLE FROM JOBS J WHERE J.JOB_ID = E.JOB_ID) AS JOB_TITLE,
+       (SELECT DEPARTMENT_NAME FROM DEPARTMENTS D WHERE D.DEPARTMENT_ID = E.DEPARTMENT_ID) AS DEPARTMENT_NAME
+FROM EMPLOYEES E;
+
+--각 부서의 사원 수를 출력 + 부서 정보
+SELECT DEPARTMENT_ID,
+       COUNT(*)
+FROM EMPLOYEES
+GROUP BY DEPARTMENT_ID;
+
+SELECT D.*,
+       NVL((SELECT COUNT(*) FROM EMPLOYEES E WHERE E.DEPARTMENT_ID = D.DEPARTMENT_ID GROUP BY DEPARTMENT_ID) , 0) AS 사원수
+FROM DEPARTMENTS D;
+
+---------------------------------------------------------------------------------
+
+--인라인 뷰
+--가짜 테이블 형태
+
+SELECT *
+FROM (SELECT *
+      FROM (SELECT * FROM EMPLOYEES)
+      ); 
+
+--ROWNUM은 조회된 순서이기 때문에, ORDER와 같이 사용되면 ROWNUM이 섞인다. 
+--그래서 아래와같이 인라인뷰로 작성해야함.
+SELECT ROWNUM,
+       FIRST_NAME,
+       SALARY             
+FROM (SELECT *
+        FROM EMPLOYEES
+        ORDER BY SALARY DESC);
+--문법2 컬럼화 (앨리어스)
+SELECT ROWNUM,
+       A.*
+FROM(SELECT FIRST_NAME,
+            SALARY
+     FROM EMPLOYEES
+     ORDER BY SALARY    
+     ) A ;
+
+--ROWNUM은 무조건 1번째부터 조회가 가능하기 때문에 중간 데이터는 조회불가.
+SELECT ROWNUM,
+       FIRST_NAME,
+       SALARY             
+FROM (SELECT *
+        FROM EMPLOYEES
+        ORDER BY SALARY DESC)
+WHERE ROWNUM BETWEEN 2 AND 20;     
+
+--2번째 인라인뷰에서 ROWNUM을 RN으로 컬럼화
+SELECT *
+FROM (SELECT ROWNUM AS RN,
+              FIRST_NAME,
+              SALARY             
+         FROM (SELECT *
+                FROM EMPLOYEES
+                ORDER BY SALARY DESC)
+        )
+WHERE RN >= 51 AND RN <=60;        
+        
+--인라인 뷰의 예시
+SELECT TO_CHAR (REGDATE,'YY-MM-DD') AS REDATE,
+        NAME
+FROM (SELECT '홍길동' AS NAME, SYSDATE AS REGDATE FROM DUAL
+        UNION ALL
+        SELECT '이순신', SYSDATE FROM DUAL);
+
+--인라인 뷰의 응용
+--부서별 사원 수 
+SELECT D.*,
+       E.TOTAL
+FROM DEPARTMENTS D
+LEFT JOIN (SELECT DEPARTMENT_ID,
+                  COUNT(*)AS TOTAL 
+            FROM EMPLOYEES 
+            GROUP BY DEPARTMENT_ID) E
+ON D.DEPARTMENT_ID = E.DEPARTMENT_ID;        
+        
+--정리        
+--단일행 (대소비교) VS 다중행 서브쿼리(IN, ANY ,ALL )
+--스칼라쿼리 -LEFT JOIN과 같은 역할, 한번에 1개의 컬럼을 가져올 때
+--인라인 뷰 - FROM에 들어가는 가짜 테이블

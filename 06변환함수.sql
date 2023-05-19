@@ -77,7 +77,7 @@ SELECT JOB_ID,
         END
 FROM EMPLOYEES;
 
---COALEACE(A,B)-NVL이랑 유사 (NULL일 경우에 0으로 치환)
+--COALESCE(A,B)-NVL이랑 유사 (NULL일 경우에 0으로 치환)
 SELECT COALESCE( COMMISSION_PCT, 0 ) FROM EMPLOYEES;
 
 -----------------------------------------------------------

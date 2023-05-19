@@ -36,10 +36,10 @@ SELECT LAST_NAME, TO_CHAR(HIRE_DATE) FROM EMPLOYEES;
 --분석함수 -행에 대한 결과를 출력하는 기능, over()와 함께 사용됩니다.
 SELECT FIRST_NAME,
        SALARY, 
-       RANK() OVER(ORDER BY SALARY DESC), --중복 순위 계산
-       DENSE_RANK() OVER(ORDER BY SALARY DESC), -- 중복순위 계산하지않음
-       ROW_NUMBER() OVER(ORDER BY SALARY DESC), --데이터의 번호
-       COUNT(*) OVER(), --전체 데이터 개수
+       RANK() OVER(ORDER BY SALARY DESC) AS 중복순위계산 , --중복 순위 계산
+       DENSE_RANK() OVER(ORDER BY SALARY DESC) AS 중복없음, -- 중복순위 계산하지않음
+       ROW_NUMBER() OVER(ORDER BY SALARY DESC) AS 데이터번호, --데이터의 번호
+       COUNT(*) OVER() AS 전체데이터개수, --전체 데이터 개수
        ROWNUM AS 조회순서--조회가 일어난 순서
 FROM EMPLOYEES; 
 
